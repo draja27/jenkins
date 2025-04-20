@@ -1,0 +1,206 @@
+Here's your Jenkins CI/CD setup guide rewritten in a clean, step-by-step format, with proper formatting and explanations. This guide includes:
+
+✅ Jenkins setup
+✅ JDK, Maven, Docker, and SonarQube configuration
+✅ Trivy scanner
+✅ DockerHub credentials
+✅ Kubernetes pipeline setup
+
+✅ 1. Install Jenkins
+Install Jenkins on your system (if not already installed). Use official instructions:
+🔗 https://www.jenkins.io/doc/book/installing/
+
+✅ 2. Install Jenkins Plugins
+Go to Manage Jenkins → Plugin Manager → Available, and install the following:
+
+Eclipse Temurin installer (for JDK)
+
+SonarQube Scanner (v2.17.3 or latest)
+
+Docker Pipeline
+
+Kubernetes Plugin and related:
+
+Kubernetes :: Pipeline :: DevOps Steps
+
+Kubernetes CLI Plugin
+
+Kubernetes Client API Plugin
+
+Kubernetes Credentials Plugin
+
+Kubernetes Credentials Provider
+
+✅ 3. Configure JDK and Maven in Jenkins
+➤ Go to: Manage Jenkins → Global Tool Configuration
+Add JDK:
+Name: jdk17
+
+✅ Check Install automatically
+
+Select: Install from adoptium.net
+
+Choose: Java 17 or the version you want
+
+Add Maven:
+Name: maven3
+
+✅ Check Install automatically
+
+Choose: Latest version
+
+Click Save.
+
+✅ 4. Create New Project
+Go to Dashboard → New Item
+
+Enter name: cicd
+
+Select: Freestyle project
+
+Under Build Discarder, enable:
+
+Discard old builds
+
+Max number of builds to keep: 2
+
+Add your GitHub code repository in Source Code Management
+
+Click Save.
+
+✅ 5. Run SonarQube in Docker
+bash
+Copy
+Edit
+docker run -d --name sonar -p 9000:9000 sonarqube:lts-community
+✅ 6. Configure SonarQube Scanner in Jenkins
+➤ Go to: Manage Jenkins → Global Tool Configuration
+Scroll to SonarQube Scanner installations
+
+Add new:
+
+Name: sonar-scanner
+
+✅ Check Install automatically
+
+Click Save
+
+✅ 7. Add SonarQube Server in Jenkins
+➤ Go to: Manage Jenkins → Configure System
+Scroll to SonarQube servers
+
+Name: sonar-scanner
+
+Server URL: http://192.168.141.130:9000
+
+Authentication: Select the token credential (we’ll create that next)
+
+✅ 8. Generate SonarQube Token
+Open SonarQube: http://192.168.141.130:9000
+
+Login:
+
+Username: admin
+
+Password: admin
+
+Go to: Administration → Security → Users
+
+Select your user and click Generate Token
+
+Copy the token
+
+✅ 9. Add SonarQube Token to Jenkins
+➤ Go to: Manage Jenkins → Credentials → Global → Add Credentials
+Kind: Secret Text
+
+Secret: Paste the SonarQube token
+
+ID/Description: sonarqube-token
+
+Click OK
+
+✅ 10. Install Trivy for Image Scanning
+Run these commands on the Jenkins server:
+
+bash
+Copy
+Edit
+sudo apt update
+sudo apt upgrade -y
+sudo apt install curl -y
+curl -sfL https://github.com/aquasecurity/trivy/releases/download/v0.34.0/trivy_0.34.0_Linux-64bit.deb -o trivy.deb
+sudo dpkg -i trivy.deb
+trivy --version
+which trivy
+✅ 11. Configure Docker in Jenkins
+➤ Go to: Manage Jenkins → Global Tool Configuration
+Scroll to Docker
+
+Add:
+
+Name: docker-latest
+
+✅ Check Install automatically
+
+Source: Download from docker.com
+
+Version: latest
+
+Click Save
+
+✅ 12. Add DockerHub Credentials
+➤ Go to: Manage Jenkins → Credentials → Global → Add Credentials
+Kind: Username and password
+
+Username: gitusername
+
+Password: Your DockerHub password
+
+ID/Description: dockerhub-creds
+
+Click Save
+
+✅ 13. Enable Jenkins to Use Docker
+Run the following on your server:
+
+bash
+Copy
+Edit
+sudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
+sudo systemctl restart docker
+groups jenkins
+docker ps -a
+✅ 14. Configure Kubernetes Plugin and Credentials
+➤ Step 1: Add Kubernetes kubeconfig File
+Go to: Manage Jenkins → Credentials → Global → Add Credentials
+
+Kind: Secret file
+
+Upload your .kube/config file
+
+ID: kube-config
+
+Description: Kubeconfig file
+
+➤ Step 2: Generate Pipeline Snippet for Kubernetes
+Use the Pipeline Syntax generator in Jenkins and choose:
+
+Step: kubeconfig
+
+Server URL: https://192.168.49.2:8443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+
+Credentials: kube-config
+
+Example script:
+
+groovy
+Copy
+Edit
+kubeconfig(
+  credentialsId: '2632adda-7241',
+  serverUrl: 'https://192.168.49.2:8443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy'
+) {
+  // Your kubectl commands here
+}
